@@ -1,0 +1,25 @@
+{
+    "name": "@btc-vision/rust-merkle-tree-linux-x64-gnu",
+    "version": "0.0.0",
+    "os": [
+        "linux"
+    ],
+    "cpu": [
+        "x64"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/btc-vision/merkle-tree-sha256.git"
+    },
+    "main": "rust-merkle-tree.linux-x64-gnu.node",
+    "files": [
+        "rust-merkle-tree.linux-x64-gnu.node"
+    ],
+    "license": "MIT",
+    "engines": {
+        "node": ">= 10"
+    },
+    "libc": [
+        "glibc"
+    ]
+}
