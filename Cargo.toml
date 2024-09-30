@@ -1,3 +1,5 @@
+#cargo-features = ["edition2021"]
+
 [package]
 edition = "2021"
 name = "rust-merkle-tree"
@@ -7,12 +9,17 @@ version = "0.0.0"
 crate-type = ["cdylib"]
 
 [dependencies]
-# Default enable napi4 feature, see https://nodejs.org/api/n-api.html#node-api-version-matrix
-napi = { version = "2.12.2", default-features = false, features = ["napi4"] }
-napi-derive = "2.12.2"
+napi = { version = "2.16.11", default-features = false, features = ["napi8", "tokio_rt"] }
+napi-derive = "2.16.12"
+tokio = "1.40.0"
+anyhow = "1.0.89"
+bytemuck = "1.18.0"
+futures = "0.3.30"
+hex = "0.4.3"
+bytes = "1.7.2"
 
 [build-dependencies]
-napi-build = "2.0.1"
+napi-build = "2.1.3"
 
 [profile.release]
 lto = true
