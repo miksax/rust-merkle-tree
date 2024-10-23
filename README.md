@@ -75,6 +75,12 @@ security, this library is intended for use in applications that require strong d
    npm run build:debug
    ```
 
+4. **Run tests**:
+
+   ```bash
+   npm test
+   ```
+
 ## Usage
 
 ### Node.js Usage
