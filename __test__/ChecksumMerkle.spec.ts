@@ -1,13 +1,12 @@
-import test from 'ava'
+import test from 'ava';
 
-import { BufferHelper } from '@btc-vision/bsi-binary'
-import { MerkleTree, MerkleProof } from '..'
-import { defaultAbiCoder } from '@ethersproject/abi'
-import { arrayify as toBytes, hexlify as toHex } from '@ethersproject/bytes'
-import { ZERO_HASH } from './types/ZeroValue.js'
-import { BlockHeaderChecksumProof } from './types/IBlockHeaderDocument.js'
-import { StandardMerkleTree } from '@btc-vision/merkle-tree'
-
+import { MerkleProof, MerkleTree } from '..';
+import { defaultAbiCoder } from '@ethersproject/abi';
+import { arrayify as toBytes } from '@ethersproject/bytes';
+import { ZERO_HASH } from './types/ZeroValue.js';
+import { BlockHeaderChecksumProof } from './types/IBlockHeaderDocument.js';
+import { StandardMerkleTree } from '@btc-vision/merkle-tree';
+import { BufferHelper } from '@btc-vision/transaction';
 
 // Old reference from @btc-vision/merkle-tree-sha256
 export class ChecksumMerkleOld {
@@ -97,29 +96,23 @@ export class ChecksumMerkleOld {
 // New implementation of ChecksumMerkle
 export class ChecksumMerkleNew {
     public static TREE_TYPE: [string, string] = ['uint8', 'bytes32'];
-    public tree: MerkleTree | undefined
+    public tree: MerkleTree | undefined;
     public values: [number, Uint8Array][] = [];
-
-    public static toBytes(value: any): Uint8Array {
-        const data = defaultAbiCoder.encode(ChecksumMerkleNew.TREE_TYPE, value)
-        const result = toBytes(data)
-        return result
-    }
 
     public get root(): string | null {
         if (!this.tree) {
             throw new Error('[Checksum] Merkle tree not generated (Get root)');
         }
-        return this.tree.rootHex()
+        return this.tree.rootHex();
     }
 
-    public static verify(
-        root: string,
-        hash: Uint8Array,
-        proof: string[],
-    ): boolean {
-        return new MerkleProof(proof.map(p => toBytes(p))).verify(toBytes(root), hash)
+    public static toBytes(value: any): Uint8Array {
+        const data = defaultAbiCoder.encode(ChecksumMerkleNew.TREE_TYPE, value);
+        return toBytes(data);
+    }
 
+    public static verify(root: string, hash: Uint8Array, proof: string[]): boolean {
+        return new MerkleProof(proof.map((p) => toBytes(p))).verify(toBytes(root), hash);
     }
 
     public validate(): void {
@@ -150,47 +143,61 @@ export class ChecksumMerkleNew {
         if (!this.tree) {
             throw new Error('Merkle tree not generated');
         }
-        const result: BlockHeaderChecksumProof = []
-        const hashes = this.tree.hashes()
+        const result: BlockHeaderChecksumProof = [];
+        const hashes = this.tree.hashes();
         for (let i = 0; i < hashes.length; i++) {
-            const hash = hashes[i]
-            result.push([Number(i), this.tree.getProof(this.tree.getIndexHash(hash)).proofHashesHex()])
+            const hash = hashes[i];
+            result.push([
+                Number(i),
+                this.tree.getProof(this.tree.getIndexHash(hash)).proofHashesHex(),
+            ]);
         }
 
-
-        return result
+        return result;
     }
 
     private generateTree(): void {
-        this.tree = new MerkleTree(this.values.map(v => ChecksumMerkleNew.toBytes(v)))
+        this.tree = new MerkleTree(this.values.map((v) => ChecksumMerkleNew.toBytes(v)));
     }
 }
 
-
 test('Test ChecksumMerkle compatibility', (t) => {
-    const merkleOld = new ChecksumMerkleOld()
+    const merkleOld = new ChecksumMerkleOld();
     merkleOld.setBlockData(
         '0x6a1a20cf378c68b915be2d0f9a898f7006d874ce8ccf2a1d061ba688b3b8e8d1',
         '0x00000000000000000000c7430d04e6cce6e8f52e8d342528deb78fbf76939fe0',
         '0x000000000000000000003b485da71d761e3946459e33301e9227005014d32fe3',
         '0x000000000000000000020c661d8d78de9105a8d79a8fd8bc6b70e94a17762ef1',
         '0x0000000000000000000151f64e37678510ad013b25e6f4198c8fcb139079ca8c',
-        '0x00000000000000000002e7eb918cbc3b0c30e7c924194d593d99949c334f89ea')
-    const proofOld = merkleOld.getProofs()
+        '0x00000000000000000002e7eb918cbc3b0c30e7c924194d593d99949c334f89ea',
+    );
+    const proofOld = merkleOld.getProofs();
 
-    const merkleNew = new ChecksumMerkleNew()
+    const merkleNew = new ChecksumMerkleNew();
     merkleNew.setBlockData(
         '0x6a1a20cf378c68b915be2d0f9a898f7006d874ce8ccf2a1d061ba688b3b8e8d1',
         '0x00000000000000000000c7430d04e6cce6e8f52e8d342528deb78fbf76939fe0',
         '0x000000000000000000003b485da71d761e3946459e33301e9227005014d32fe3',
         '0x000000000000000000020c661d8d78de9105a8d79a8fd8bc6b70e94a17762ef1',
         '0x0000000000000000000151f64e37678510ad013b25e6f4198c8fcb139079ca8c',
-        '0x00000000000000000002e7eb918cbc3b0c30e7c924194d593d99949c334f89ea')
-    const proofNew = merkleNew.getProofs()
+        '0x00000000000000000002e7eb918cbc3b0c30e7c924194d593d99949c334f89ea',
+    );
+    const proofNew = merkleNew.getProofs();
 
-
-    t.deepEqual(proofOld, proofNew)
-    t.deepEqual(merkleOld!.root, merkleNew!.root)
-    t.true(ChecksumMerkleOld.verify(merkleOld?.root!, ChecksumMerkleOld.TREE_TYPE, merkleOld?.values[0]!, proofOld![0][1]))
-    t.true(new MerkleProof(proofOld![0][1].map(p => toBytes(p))).verify(toBytes(merkleNew?.root!), MerkleTree.hash(ChecksumMerkleNew.toBytes(merkleOld?.values[0]!))))
-})
+    t.deepEqual(proofOld, proofNew);
+    t.deepEqual(merkleOld!.root, merkleNew!.root);
+    t.true(
+        ChecksumMerkleOld.verify(
+            merkleOld?.root!,
+            ChecksumMerkleOld.TREE_TYPE,
+            merkleOld?.values[0]!,
+            proofOld![0][1],
+        ),
+    );
+    t.true(
+        new MerkleProof(proofOld![0][1].map((p) => toBytes(p))).verify(
+            toBytes(merkleNew?.root!),
+            MerkleTree.hash(ChecksumMerkleNew.toBytes(merkleOld?.values[0]!)),
+        ),
+    );
+});

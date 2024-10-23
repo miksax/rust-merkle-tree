@@ -1,8 +1,8 @@
-import test from 'ava'
+import test from 'ava';
 
-import { Address, BufferHelper, MemorySlotData, MemorySlotPointer } from '@btc-vision/bsi-binary';
 import crypto from 'crypto';
-import { MerkleTreeOld, MerkleTreeNew } from './MerkleTree.js';
+import { MerkleTreeNew, MerkleTreeOld } from './MerkleTree.js';
+import { Address, BufferHelper, MemorySlotData, MemorySlotPointer } from '@btc-vision/transaction';
 
 export class StateMerkleTreeOld extends MerkleTreeOld<MemorySlotPointer, MemorySlotData<bigint>> {
     public static TREE_TYPE: [string, string] = ['bytes32', 'bytes32'];
@@ -263,14 +263,13 @@ export class StateMerkleTreeNew extends MerkleTreeNew<MemorySlotPointer, MemoryS
             throw new Error('Merkle tree not generated');
         }
 
-
         const proofs = new Map<Address, Map<MemorySlotPointer, string[]>>();
         for (const [address, val] of this.values.entries()) {
             for (const [key, value] of val.entries()) {
                 const pointer = this.encodePointer(address, key);
                 const valueAsBuffer = Buffer.from(BufferHelper.valueToUint8Array(value));
 
-                const proof: string[] = this.getProofHashes([pointer, valueAsBuffer])
+                const proof: string[] = this.getProofHashes([pointer, valueAsBuffer]);
                 if (!proof || !proof.length) {
                     throw new Error(`Proof not found for ${pointer.toString('hex')}`);
                 }
@@ -370,7 +369,7 @@ export class StateMerkleTreeNew extends MerkleTreeNew<MemorySlotPointer, MemoryS
             return [uint8Array, []];
         }
 
-        const proof: string[] = this.getProofHashes([pointer, valueAsBuffer])
+        const proof: string[] = this.getProofHashes([pointer, valueAsBuffer]);
         if (!proof || !proof.length) {
             throw new Error(`Proof not found for ${pointer.toString('hex')}`);
         }
@@ -476,24 +475,22 @@ export class StateMerkleTreeNew extends MerkleTreeNew<MemorySlotPointer, MemoryS
 }
 
 test('Test StateMerkleTree compatibility', (t) => {
+    const merkleOld = new StateMerkleTreeOld();
+    merkleOld.updateValue('abcd1', 1n, 1n);
+    merkleOld.updateValue('abcd2', 2n, 2n);
+    merkleOld.updateValue('abcd1', 3n, 3n);
+    merkleOld.updateValue('abcd2', 4n, 4n);
+    merkleOld.generateTree();
+    const proofOld = merkleOld.getProofs();
 
-    const merkleOld = new StateMerkleTreeOld()
-    merkleOld.updateValue("abcd1", 1n, 1n)
-    merkleOld.updateValue("abcd2", 2n, 2n)
-    merkleOld.updateValue("abcd1", 3n, 3n)
-    merkleOld.updateValue("abcd2", 4n, 4n)
-    merkleOld.generateTree()
-    const proofOld = merkleOld.getProofs()
+    const merkleNew = new StateMerkleTreeNew();
+    merkleNew.updateValue('abcd1', 1n, 1n);
+    merkleNew.updateValue('abcd2', 2n, 2n);
+    merkleNew.updateValue('abcd1', 3n, 3n);
+    merkleNew.updateValue('abcd2', 4n, 4n);
+    merkleNew.generateTree();
+    const proofNew = merkleNew.getProofs();
 
-    const merkleNew = new StateMerkleTreeNew()
-    merkleNew.updateValue("abcd1", 1n, 1n)
-    merkleNew.updateValue("abcd2", 2n, 2n)
-    merkleNew.updateValue("abcd1", 3n, 3n)
-    merkleNew.updateValue("abcd2", 4n, 4n)
-    merkleNew.generateTree()
-    const proofNew = merkleNew.getProofs()
-
-    t.deepEqual(merkleOld!.values, merkleNew!.values)
-    t.deepEqual(proofOld, proofNew)
-
-})
+    t.deepEqual(merkleOld!.values, merkleNew!.values);
+    t.deepEqual(proofOld, proofNew);
+});

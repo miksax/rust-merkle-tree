@@ -1,19 +1,19 @@
 {
-    "name": "@btc-vision/rust-merkle-tree-darwin-universal",
-    "version": "0.0.0",
-    "os": [
-        "darwin"
-    ],
-    "repository": {
-        "type": "git",
-        "url": "git://github.com/btc-vision/merkle-tree-sha256.git"
-    },
-    "main": "rust-merkle-tree.darwin-universal.node",
-    "files": [
-        "rust-merkle-tree.darwin-universal.node"
-    ],
-    "license": "MIT",
-    "engines": {
-        "node": ">= 10"
-    }
+  "name": "@btc-vision/rust-merkle-tree-darwin-universal",
+  "version": "0.0.0",
+  "os": [
+    "darwin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/btc-vision/merkle-tree-sha256.git"
+  },
+  "main": "rust-merkle-tree.darwin-universal.node",
+  "files": [
+    "rust-merkle-tree.darwin-universal.node"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">= 10"
+  }
 }
