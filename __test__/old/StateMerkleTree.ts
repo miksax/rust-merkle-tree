@@ -33,7 +33,7 @@ export class StateMerkleTreeOld extends MerkleTree<MemorySlotPointer, MemorySlot
         const proofs = new AddressMap<Map<MemorySlotPointer, string[]>>();
         for (const [address, val] of this.values) {
             for (const [key, value] of val.entries()) {
-                const pointer = this.encodePointer(address, key);
+                const pointer = this.encodePointer(key);
                 const valueAsBuffer = Buffer.from(BufferHelper.valueToUint8Array(value));
 
                 const proof: string[] = this.tree.getProof([pointer, valueAsBuffer]);
@@ -130,7 +130,7 @@ export class StateMerkleTreeOld extends MerkleTree<MemorySlotPointer, MemorySlot
 
         const uint8Array = BufferHelper.valueToUint8Array(value);
         const valueAsBuffer = Buffer.from(uint8Array);
-        const pointer = this.encodePointer(address, key);
+        const pointer = this.encodePointer(key);
 
         if (!this.tree) {
             return [uint8Array, []];
@@ -166,7 +166,7 @@ export class StateMerkleTreeOld extends MerkleTree<MemorySlotPointer, MemorySlot
         }
 
         for (const [key, value] of map.entries()) {
-            const pointer = this.encodePointer(address, key);
+            const pointer = this.encodePointer(key);
             const valueAsBuffer = Buffer.from(BufferHelper.valueToUint8Array(value));
 
             const proof: string[] = this.tree.getProof([pointer, valueAsBuffer]);
@@ -200,19 +200,21 @@ export class StateMerkleTreeOld extends MerkleTree<MemorySlotPointer, MemorySlot
         return proofs;
     }
 
-    public encodePointer(contract: Address, pointer: bigint): Buffer {
-        return StateMerkleTreeOld.encodePointerBuffer(
+    public encodePointer(pointer: bigint): Buffer {
+        return Buffer.from(
+            BufferHelper.pointerToUint8Array(pointer),
+        ); /*StateMerkleTreeOld.encodePointerBuffer(
             contract,
             BufferHelper.pointerToUint8Array(pointer),
-        );
+        );*/
     }
 
     public getValues(): [Buffer, Buffer][] {
         const entries: [Buffer, Buffer][] = [];
 
-        for (const [address, map] of this.values) {
+        for (const map of this.values.values()) {
             for (const [key, value] of map.entries()) {
-                const pointer = this.encodePointer(address, key);
+                const pointer = this.encodePointer(key);
                 const valueAsBuffer = Buffer.from(BufferHelper.valueToUint8Array(value));
 
                 entries.push([pointer, valueAsBuffer]);
