@@ -1,12 +1,16 @@
-import { BufferHelper } from '@btc-vision/bsi-binary';
-import { StandardMerkleTree } from '@openzeppelin/merkle-tree';
-import { ZERO_HASH } from './types/ZeroValue.js';
-import { BlockHeaderChecksumProof } from './types/IBlockHeaderDocument.js';
+import { StandardMerkleTree } from '@btc-vision/merkle-tree';
+import { BufferHelper } from '@btc-vision/transaction';
+import { ZERO_HASH } from '../types/ZeroValue.js';
+import { BlockHeaderChecksumProof } from '../types/IBlockHeaderDocument.js';
 
-export class ChecksumMerkle {
+export class ChecksumMerkleOld {
     public static TREE_TYPE: [string, string] = ['uint8', 'bytes32'];
     protected tree: StandardMerkleTree<[number, Uint8Array]> | undefined;
     private values: [number, Uint8Array][] = [];
+
+    public get rawValues(): [number, Uint8Array][] {
+        return this.values;
+    }
 
     public get root(): string {
         if (!this.tree) {
@@ -61,7 +65,6 @@ export class ChecksumMerkle {
         const proofs: BlockHeaderChecksumProof = [];
         for (let i = 0; i < this.values.length; i++) {
             const proof: string[] = this.tree.getProof(this.values[i]);
-
             if (!proof || !proof.length) {
                 throw new Error(`Proof not found for ${this.values[i][0]}`);
             }
@@ -79,7 +82,7 @@ export class ChecksumMerkle {
 
         this.tree = StandardMerkleTree.of<[number, Uint8Array]>(
             this.values,
-            ChecksumMerkle.TREE_TYPE,
+            ChecksumMerkleOld.TREE_TYPE,
             {
                 sortLeaves: true,
             },

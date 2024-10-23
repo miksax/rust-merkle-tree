@@ -67,6 +67,7 @@
     "dependencies": {
         "@btc-vision/transaction": "^1.0.117",
         "@types/node": "^22.7.4",
+        "bitcoinjs-lib": "github:btc-vision/bitcoinjs-lib",
         "sha.js": "^2.4.11",
         "sha256": "^0.2.0",
         "tsx": "^4.19.1"
