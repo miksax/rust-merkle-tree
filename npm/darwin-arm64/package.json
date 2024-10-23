@@ -1,22 +1,22 @@
 {
-    "name": "@btc-vision/rust-merkle-tree-darwin-arm64",
-    "version": "0.0.0",
-    "os": [
-        "darwin"
-    ],
-    "cpu": [
-        "arm64"
-    ],
-    "repository": {
-        "type": "git",
-        "url": "git://github.com/btc-vision/merkle-tree-sha256.git"
-    },
-    "main": "rust-merkle-tree.darwin-arm64.node",
-    "files": [
-        "rust-merkle-tree.darwin-arm64.node"
-    ],
-    "license": "MIT",
-    "engines": {
-        "node": ">= 10"
-    }
+  "name": "@btc-vision/rust-merkle-tree-darwin-arm64",
+  "version": "0.0.0",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/btc-vision/merkle-tree-sha256.git"
+  },
+  "main": "rust-merkle-tree.darwin-arm64.node",
+  "files": [
+    "rust-merkle-tree.darwin-arm64.node"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">= 10"
+  }
 }
