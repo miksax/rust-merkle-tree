@@ -1,4 +1,4 @@
-# Merkle Tree Library Development
+# Merkle Tree Library
 
 ## Overview
 

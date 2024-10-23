@@ -1,6 +1,6 @@
 {
     "name": "@btc-vision/rust-merkle-tree",
-    "description": "Merkle Tree implementation in Rust",
+    "description": "Merkle Tree implementation in Rust using sha256",
     "version": "0.0.0",
     "main": "index.js",
     "types": "index.d.ts",
@@ -49,7 +49,7 @@
         ]
     },
     "engines": {
-        "node": ">= 18"
+        "node": ">= 20"
     },
     "scripts": {
         "artifacts": "napi artifacts",
@@ -65,8 +65,8 @@
         "url": "git://github.com/btc-vision/merkle-tree-sha256.git"
     },
     "dependencies": {
-        "@btc-vision/transaction": "^1.0.117",
-        "@types/node": "^22.7.4",
+        "@btc-vision/transaction": "^1.0.118",
+        "@types/node": "^22.7.9",
         "bitcoinjs-lib": "github:btc-vision/bitcoinjs-lib",
         "sha.js": "^2.4.11",
         "sha256": "^0.2.0",
