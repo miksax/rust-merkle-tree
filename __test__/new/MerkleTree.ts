@@ -25,12 +25,12 @@ export abstract class MerkleTreeNew<K, V> {
         return this.tree.rootHex()!;
     }
 
-    public toBytes(value: any): Uint8Array {
+    public toBytes(value: unknown[]): Uint8Array {
         const data = defaultAbiCoder.encode(this.treeType, value);
         return toBytes(data);
     }
 
-    public getProofHashes(data: any): Array<string> {
+    public getProofHashes(data: Buffer[]): Array<string> {
         return this.tree!.getProof(this.tree!.getIndexData(this.toBytes(data))).proofHashesHex();
     }
 

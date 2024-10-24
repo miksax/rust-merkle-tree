@@ -18,7 +18,7 @@ export class ChecksumMerkleNew {
         return this.tree.rootHex();
     }
 
-    public static toBytes(value: any): Uint8Array {
+    public static toBytes(value: unknown[]): Uint8Array {
         const data = defaultAbiCoder.encode(ChecksumMerkleNew.TREE_TYPE, value);
         return toBytes(data);
     }
