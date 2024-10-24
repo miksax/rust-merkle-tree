@@ -18,8 +18,7 @@
             "es2020",
             "es2021",
             "es2022",
-            "esnext",
-            "dom"
+            "esnext"
         ],
         "strict": true,
         "strictNullChecks": true,
@@ -36,6 +35,12 @@
             "node_modules/@types"
         ]
     },
-    "include": ["."],
-    "exclude": ["node_modules", "bench", "__test__"]
+    "include": [
+        "."
+    ],
+    "exclude": [
+        "node_modules",
+        "bench",
+        "__test__"
+    ]
 }
