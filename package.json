@@ -63,7 +63,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "git://github.com/btc-vision/merkle-tree-sha256.git"
+        "url": "git://github.com/btc-vision/rust-merkle-tree.git"
     },
     "dependencies": {
         "@btc-vision/transaction": "^1.0.118",
