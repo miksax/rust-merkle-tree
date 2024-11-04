@@ -1,5 +1,5 @@
 import { Address, EcKeyPair } from '@btc-vision/transaction';
-import { networks } from 'bitcoinjs-lib';
+import { networks } from '@btc-vision/bitcoin';
 
 export const NETWORK = networks.regtest;
 
