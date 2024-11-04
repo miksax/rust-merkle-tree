@@ -1,22 +1,22 @@
 {
-  "name": "@btc-vision/rust-merkle-tree-android-arm-eabi",
-  "version": "0.0.1",
-  "os": [
-    "android"
-  ],
-  "cpu": [
-    "arm"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/btc-vision/merkle-tree-sha256.git"
-  },
-  "main": "rust-merkle-tree.android-arm-eabi.node",
-  "files": [
-    "rust-merkle-tree.android-arm-eabi.node"
-  ],
-  "license": "MIT",
-  "engines": {
-    "node": ">= 10"
-  }
+    "name": "@btc-vision/rust-merkle-tree-android-arm-eabi",
+    "version": "0.0.1",
+    "os": [
+        "android"
+    ],
+    "cpu": [
+        "arm"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/btc-vision/rust-merkle-tree"
+    },
+    "main": "rust-merkle-tree.android-arm-eabi.node",
+    "files": [
+        "rust-merkle-tree.android-arm-eabi.node"
+    ],
+    "license": "MIT",
+    "engines": {
+        "node": ">= 10"
+    }
 }
