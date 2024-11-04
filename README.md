@@ -33,7 +33,6 @@ security, this library is intended for use in applications that require strong d
 - [Usage](#usage)
     - [Rust Usage](#rust-usage)
     - [Node.js Usage](#nodejs-usage)
-- [Task Description](#task-description)
 - [Installation](#installation)
 - [References](#references)
 - [Contributing](#contributing)
@@ -106,18 +105,6 @@ For Node.js integration, the library provides bindings via N-API.
    const tree = new MerkleTree(leaves);
    console.log('Merkle Root:', tree.root());
    ```
-
-## Task Description
-
-The primary task for this library involves developing a Rust-based Merkle tree that is secure, high-performing, and
-compatible with both Rust and Node.js environments. Below are the core tasks:
-
-1. **Hash Function**: Implement SHA-256 as the hash function.
-2. **Security**: Safeguard against known Merkle tree exploits (e.g., hash collisions, tree manipulation).
-3. **Performance**: Optimize performance for both Rust and Node.js implementations.
-4. **Cross-Language Support**: Provide integration with Node.js through N-API bindings.
-5. **Compatibility**: Ensure backward compatibility with existing systems using Merkle trees for state proof
-   validations.
 
 ## References
 
