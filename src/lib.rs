@@ -17,10 +17,12 @@ static INIT: Once = Once::new();
 #[napi]
 pub fn safe_init_rust() {
     INIT.call_once(|| {
-        panic::set_hook(Box::new(|_| {}));
+        panic::set_hook(Box::new(|e| {
+            log::error!("{}", e);
+        }));
 
         Builder::new()
-            .filter_level(LevelFilter::Info)  // Set log level here
+            .filter_level(LevelFilter::Error)  // Set log level here
             .init();
     });
 }
