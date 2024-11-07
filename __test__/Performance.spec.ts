@@ -105,6 +105,19 @@ test('Test Performance', (t) => {
         );
         newPerf += performance.now() - now;
 
+        const a = Date.now();
+        const hashes = newTree.hashes();
+        console.log('Hashes: ', Date.now() - a + 'ms');
+
+        const proofs = [];
+
+        const start = Date.now();
+        for (let i = 0; i < hashes.length; i++) {
+            const hash = hashes[i];
+            proofs.push(newTree.getProof(newTree.getIndexHash(hash)).proofHashesHex());
+        }
+        console.log('Proofs: ', Date.now() - start + 'ms');
+
         t.assert(oldTree.root, newTree.rootHex());
     }
 

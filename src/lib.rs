@@ -3,11 +3,24 @@
 #[macro_use]
 extern crate napi_derive;
 
+use env_logger::Builder;
+use log::LevelFilter;
 use std::panic;
+use std::sync::Once;
+
 mod application;
 mod domain;
 mod interfaces;
+
+static INIT: Once = Once::new();
+
 #[napi]
-pub fn init() {
-    panic::set_hook(Box::new(|_| {}));
+pub fn safe_init_rust() {
+    INIT.call_once(|| {
+        panic::set_hook(Box::new(|_| {}));
+
+        Builder::new()
+            .filter_level(LevelFilter::Info)  // Set log level here
+            .init();
+    });
 }

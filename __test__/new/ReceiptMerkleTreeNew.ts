@@ -1,6 +1,6 @@
 import { MerkleTreeNew } from './MerkleTree.js';
-import { BTC_FAKE_ADDRESS, MAX_HASH, MAX_MINUS_ONE } from '../types/ZeroValue.js';
 import { Address, AddressMap } from '@btc-vision/transaction';
+import { BTC_FAKE_ADDRESS, MAX_HASH, MAX_MINUS_ONE } from '../types/ZeroValue.js';
 
 export class ReceiptMerkleTreeNew extends MerkleTreeNew<string, Buffer> {
     public static TREE_TYPE: [string, string] = ['bytes', 'bytes'];
@@ -10,10 +10,6 @@ export class ReceiptMerkleTreeNew extends MerkleTreeNew<string, Buffer> {
     }
 
     public getProofs(): AddressMap<Map<string, string[]>> {
-        if (!this.tree) {
-            throw new Error('Merkle tree not generated');
-        }
-
         const proofs = new AddressMap<Map<string, string[]>>();
         for (const [address, val] of this.values) {
             for (const [key, value] of val.entries()) {
@@ -96,7 +92,7 @@ export class ReceiptMerkleTreeNew extends MerkleTreeNew<string, Buffer> {
     }
 
     public getValueWithProofs(address: Address, key: string): [Buffer, string[]] | undefined {
-        if (!this.tree) {
+        if (!this._tree) {
             return;
         }
 
@@ -115,10 +111,6 @@ export class ReceiptMerkleTreeNew extends MerkleTreeNew<string, Buffer> {
     }
 
     public getValuesWithProofs(address: Address): Map<string, [Buffer, string[]]> {
-        if (!this.tree) {
-            throw new Error('Merkle tree not generated');
-        }
-
         const proofs = new Map<string, [Buffer, string[]]>();
         if (!this.values.has(address)) {
             return proofs;
@@ -144,7 +136,7 @@ export class ReceiptMerkleTreeNew extends MerkleTreeNew<string, Buffer> {
     }
 
     public getEverythingWithProofs(): AddressMap<Map<string, [Buffer, string[]]>> | undefined {
-        if (!this.tree) {
+        if (!this._tree) {
             return;
         }
 

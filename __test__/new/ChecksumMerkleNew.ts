@@ -11,10 +11,11 @@ export class ChecksumMerkleNew {
     public tree: MerkleTree | undefined;
     public values: [number, Uint8Array][] = [];
 
-    public get root(): string | null {
+    public get root(): string {
         if (!this.tree) {
             throw new Error('[Checksum] Merkle tree not generated (Get root)');
         }
+
         return this.tree.rootHex();
     }
 
@@ -23,14 +24,9 @@ export class ChecksumMerkleNew {
         return toBytes(data);
     }
 
-    public static verify(root: string, hash: Uint8Array, proof: string[]): boolean {
-        return new MerkleProof(proof.map((p) => toBytes(p))).verify(toBytes(root), hash);
-    }
-
-    public validate(): void {
-        if (!this.tree) {
-            throw new Error('[Checksum] Merkle tree not generated');
-        }
+    public static verify(root: Uint8Array, values: [number, Uint8Array], proof: string[]): boolean {
+        const generatedProof = new MerkleProof(proof.map((p) => toBytes(p)));
+        return generatedProof.verify(root, MerkleTree.hash(ChecksumMerkleNew.toBytes(values)));
     }
 
     public setBlockData(
@@ -71,6 +67,9 @@ export class ChecksumMerkleNew {
     }
 
     private generateTree(): void {
-        this.tree = new MerkleTree(this.values.map((v) => ChecksumMerkleNew.toBytes(v)));
+        this.tree = new MerkleTree(
+            this.values.map((v) => ChecksumMerkleNew.toBytes(v)),
+            true,
+        );
     }
 }
