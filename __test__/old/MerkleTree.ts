@@ -1,11 +1,14 @@
 import { StandardMerkleTree } from '@btc-vision/merkle-tree';
 import { Address, AddressMap } from '@btc-vision/transaction';
 import { BTC_FAKE_ADDRESS } from '../types/ZeroValue.js';
+import { safeInitRust } from '../../index.js';
+
+safeInitRust();
 
 export abstract class MerkleTree<K, V> {
     public static readonly DUMMY_ADDRESS_NON_EXISTENT: Address = BTC_FAKE_ADDRESS;
     public readonly values: AddressMap<Map<K, V>> = new AddressMap();
-    
+
     protected tree: StandardMerkleTree<[Buffer, Buffer]> | undefined;
 
     protected valueChanged: boolean = false;

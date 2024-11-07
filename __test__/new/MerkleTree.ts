@@ -1,28 +1,33 @@
-import { MerkleProof, MerkleTree } from '../..';
+import { MerkleTree as RustMerkleTree } from '../..';
 import { defaultAbiCoder } from '@ethersproject/abi';
 import { arrayify as toBytes } from '@ethersproject/bytes';
 import { Address, AddressMap } from '@btc-vision/transaction';
 import { BTC_FAKE_ADDRESS } from '../types/ZeroValue.js';
 
 export abstract class MerkleTreeNew<K, V> {
+    public static readonly DUMMY_ADDRESS_NON_EXISTENT: Address = BTC_FAKE_ADDRESS;
+
     public readonly values: AddressMap<Map<K, V>> = new AddressMap();
 
     protected valueChanged: boolean = false;
     protected frozen: boolean = false;
-
-    protected readonly DUMMY_ADDRESS_NON_EXISTENT: Address = BTC_FAKE_ADDRESS;
-    protected tree: MerkleTree | undefined;
 
     private readonly MINIMUM_VALUES = 2; // To generate a tree, we need at least 2 values
 
     protected constructor(protected readonly treeType: [string, string]) {}
 
     public get root(): string {
-        if (!this.tree) {
+        return this.tree.rootHex();
+    }
+
+    protected _tree: RustMerkleTree | undefined;
+
+    private get tree(): RustMerkleTree {
+        if (!this._tree) {
             throw new Error('Merkle tree not generated');
         }
 
-        return this.tree.rootHex()!;
+        return this._tree;
     }
 
     public toBytes(value: unknown[]): Uint8Array {
@@ -31,15 +36,15 @@ export abstract class MerkleTreeNew<K, V> {
     }
 
     public getProofHashes(data: Buffer[]): Array<string> {
-        return this.tree!.getProof(this.tree!.getIndexData(this.toBytes(data))).proofHashesHex();
+        return this.tree.getProof(this.tree.getIndexData(this.toBytes(data))).proofHashesHex();
     }
 
-    public verify(root: string, value: Buffer[] | Uint8Array[], proof: string[]): boolean {
+    /*public verify(root: string, value: Buffer[] | Uint8Array[], proof: string[]): boolean {
         return new MerkleProof(proof.map((p) => toBytes(p))).verify(
             toBytes(root),
             this.toBytes(value),
         );
-    }
+    }*/
 
     public size(): number {
         return this.values.size;
@@ -53,7 +58,7 @@ export abstract class MerkleTreeNew<K, V> {
     ): [V | Uint8Array, string[]] | undefined;
 
     public hasTree(): boolean {
-        return !!this.tree;
+        return !!this._tree;
     }
 
     public generateTree(regeneratedIfValueChanged: boolean = true): void {
@@ -65,12 +70,12 @@ export abstract class MerkleTreeNew<K, V> {
             return;
         }
 
-        if (this.tree && !this.valueChanged && !regeneratedIfValueChanged) {
+        if (this._tree && !this.valueChanged && !regeneratedIfValueChanged) {
             return;
         }
 
         const values = this.getValues();
-        this.tree = new MerkleTree(values.map((l) => this.toBytes(l)));
+        this._tree = new RustMerkleTree(values.map((l) => this.toBytes(l)));
 
         this.valueChanged = false;
     }
@@ -107,9 +112,9 @@ export abstract class MerkleTreeNew<K, V> {
         this.frozen = true;
     }
 
-    public getData(): AddressMap<Map<K, V>> {
+    /*public getData(): AddressMap<Map<K, V>> {
         return this.values;
-    }
+    }*/
 
     public abstract getProofs(): AddressMap<Map<K, string[]>>;
 

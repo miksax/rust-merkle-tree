@@ -6,7 +6,9 @@ import {
     MemorySlotData,
     MemorySlotPointer,
 } from '@btc-vision/transaction';
-import crypto from 'crypto';
+import { defaultAbiCoder } from '@ethersproject/abi';
+import { MerkleProof, MerkleTree } from '../../index.js';
+import { toBytes } from '@btc-vision/merkle-tree/dist/bytes.js';
 
 export class StateMerkleTreeNew extends MerkleTreeNew<MemorySlotPointer, MemorySlotData<bigint>> {
     public static TREE_TYPE: [string, string] = ['bytes32', 'bytes32'];
@@ -15,19 +17,16 @@ export class StateMerkleTreeNew extends MerkleTreeNew<MemorySlotPointer, MemoryS
         super(StateMerkleTreeNew.TREE_TYPE);
     }
 
-    public static encodePointerBuffer(contract: Address, pointer: Uint8Array | Buffer): Buffer {
-        const hash = crypto.createHash('sha256');
-        hash.update(contract);
-        hash.update(pointer);
+    public static verify(root: string, values: Buffer[] | Uint8Array[], proof: string[]): boolean {
+        const data = defaultAbiCoder.encode(StateMerkleTreeNew.TREE_TYPE, values);
 
-        return hash.digest();
+        return new MerkleProof(proof.map((p) => toBytes(p))).verify(
+            toBytes(root),
+            MerkleTree.hash(toBytes(data)),
+        );
     }
 
     public getProofs(): AddressMap<Map<MemorySlotPointer, string[]>> {
-        if (!this.tree) {
-            throw new Error('Merkle tree not generated');
-        }
-
         const proofs = new AddressMap<Map<MemorySlotPointer, string[]>>();
         for (const [address, val] of this.values) {
             for (const [key, value] of val.entries()) {
@@ -130,7 +129,7 @@ export class StateMerkleTreeNew extends MerkleTreeNew<MemorySlotPointer, MemoryS
         const valueAsBuffer = Buffer.from(uint8Array);
         const pointer = this.encodePointer(key);
 
-        if (!this.tree) {
+        if (!this._tree) {
             return [uint8Array, []];
         }
 
@@ -145,10 +144,6 @@ export class StateMerkleTreeNew extends MerkleTreeNew<MemorySlotPointer, MemoryS
     public getValuesWithProofs(
         address: Address,
     ): Map<MemorySlotPointer, [MemorySlotData<bigint>, string[]]> {
-        if (!this.tree) {
-            throw new Error('Merkle tree not generated');
-        }
-
         const proofs = new Map<MemorySlotPointer, [MemorySlotData<bigint>, string[]]>();
         if (!this.values.has(address)) {
             return proofs;
@@ -178,7 +173,7 @@ export class StateMerkleTreeNew extends MerkleTreeNew<MemorySlotPointer, MemoryS
     public getEverythingWithProofs():
         | AddressMap<Map<MemorySlotPointer, [MemorySlotData<bigint>, string[]]>>
         | undefined {
-        if (!this.tree) {
+        if (!this._tree) {
             return;
         }
 
@@ -193,12 +188,7 @@ export class StateMerkleTreeNew extends MerkleTreeNew<MemorySlotPointer, MemoryS
     }
 
     public encodePointer(pointer: bigint): Buffer {
-        return Buffer.from(
-            BufferHelper.pointerToUint8Array(pointer),
-        ); /*StateMerkleTreeNew.encodePointerBuffer(
-            contract,
-            BufferHelper.pointerToUint8Array(pointer),
-        );*/
+        return Buffer.from(BufferHelper.pointerToUint8Array(pointer));
     }
 
     public getValues(): [Buffer, Buffer][] {
@@ -225,7 +215,7 @@ export class StateMerkleTreeNew extends MerkleTreeNew<MemorySlotPointer, MemoryS
         dummyMap.set(2n, 2n);
 
         // Add dummy values for the contract
-        dummyValues.set(this.DUMMY_ADDRESS_NON_EXISTENT, dummyMap);
+        dummyValues.set(MerkleTreeNew.DUMMY_ADDRESS_NON_EXISTENT, dummyMap);
 
         return dummyValues;
     }

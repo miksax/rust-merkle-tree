@@ -1,6 +1,9 @@
 import { MerkleTree } from './MerkleTree.js';
 import { Address, AddressMap } from '@btc-vision/transaction';
 import { BTC_FAKE_ADDRESS, MAX_HASH, MAX_MINUS_ONE } from '../types/ZeroValue.js';
+import { safeInitRust } from '../../index.js';
+
+safeInitRust();
 
 export class ReceiptMerkleTreeOld extends MerkleTree<string, Buffer> {
     public static TREE_TYPE: [string, string] = ['bytes', 'bytes'];

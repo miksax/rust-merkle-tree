@@ -5,22 +5,16 @@ import {
     MemorySlotData,
     MemorySlotPointer,
 } from '@btc-vision/transaction';
-import crypto from 'crypto';
 import { MerkleTree } from './MerkleTree.js';
+import { safeInitRust } from '../../index.js';
+
+safeInitRust();
 
 export class StateMerkleTreeOld extends MerkleTree<MemorySlotPointer, MemorySlotData<bigint>> {
     public static TREE_TYPE: [string, string] = ['bytes32', 'bytes32'];
 
     public constructor() {
         super(StateMerkleTreeOld.TREE_TYPE);
-    }
-
-    public static encodePointerBuffer(contract: Address, pointer: Uint8Array | Buffer): Buffer {
-        const hash = crypto.createHash('sha256');
-        hash.update(contract);
-        hash.update(pointer);
-
-        return hash.digest();
     }
 
     public getProofs(): AddressMap<Map<MemorySlotPointer, string[]>> {

@@ -2,6 +2,9 @@ import { StandardMerkleTree } from '@btc-vision/merkle-tree';
 import { BufferHelper } from '@btc-vision/transaction';
 import { ZERO_HASH } from '../types/ZeroValue.js';
 import { BlockHeaderChecksumProof } from '../types/IBlockHeaderDocument.js';
+import { safeInitRust } from '../../index.js';
+
+safeInitRust();
 
 export class ChecksumMerkleOld {
     public static TREE_TYPE: [string, string] = ['uint8', 'bytes32'];
