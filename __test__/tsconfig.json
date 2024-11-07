@@ -1,11 +1,20 @@
 {
     "extends": "../tsconfig.json",
     "compilerOptions": {
-      "module": "ESNext",
-      "moduleResolution": "Bundler",
-      "outDir": "lib",
-      "rootDir": "."
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "node",
+        "isolatedModules": true,
+        "skipLibCheck": true,
+        "noEmit": true
     },
-    "include": ["*.ts"],
-    "exclude": ["lib"]
-  }
+    "include": [
+        "*.ts",
+        "../*.ts"
+    ],
+    // Updated to include TypeScript files from "src"
+    "exclude": [
+        "lib",
+        "node_modules"
+    ]
+}

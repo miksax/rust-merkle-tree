@@ -29,6 +29,7 @@
         "moduleResolution": "node",
         "allowJs": true,
         "incremental": true,
+        "esModuleInterop": true,
         "allowSyntheticDefaultImports": true,
         "outDir": "build",
         "typeRoots": [
