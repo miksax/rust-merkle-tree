@@ -1,4 +1,4 @@
-import { MerkleProof, MerkleTree } from '../../index.js';
+import { MerkleProof, MerkleTree } from '../..';
 import { defaultAbiCoder } from '@ethersproject/abi';
 import { BufferHelper } from '@btc-vision/transaction';
 import { ZERO_HASH } from '../types/ZeroValue.js';
