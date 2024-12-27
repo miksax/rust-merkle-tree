@@ -10,8 +10,10 @@ export declare class MerkleTreeOptions {
 }
 export type MerkleProofJs = MerkleProof
 export declare class MerkleProof {
-  constructor(proofHashes: Array<Uint8Array>)
+  constructor(proofHashes: Array<Uint8Array>, pos: number, size: number, sort: boolean)
+  static newProof(proofHashes: Array<Uint8Array>, treeIndex: number, sort: boolean): MerkleProof
   verify(root: Uint8Array, hash: Uint8Array): boolean
+  verifyData(root: Uint8Array, data: Uint8Array): boolean
   root(hash: Uint8Array): Uint8Array
   rootHex(hash: Uint8Array): string
   proofHashes(): Array<Uint8Array>
@@ -30,4 +32,6 @@ export declare class MerkleTree {
   getProof(leafIndex: number): MerkleProof
   getIndexData(data: Uint8Array): number
   getIndexHash(hash: Uint8Array): number
+  getProofIndexByData(data: Uint8Array): number
+  getProofIndexByHash(hash: Uint8Array): number
 }

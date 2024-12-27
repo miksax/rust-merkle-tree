@@ -80,4 +80,23 @@ impl MerkleTreeJs {
       .map(|r| r as u32)
       .map_err(|e| napi::Error::from_reason(e.to_string()))
   }
+
+  #[napi(catch_unwind)]
+  pub fn get_proof_index_by_data(&self, data: Uint8Array) -> napi::Result<u32> {
+    let hash = MerkleTreeSha256::hash_leaf(&data);
+    self
+      .inner
+      .get_index_by_hash(&hash)
+      .map(|r| r as u32)
+      .map_err(|e| napi::Error::from_reason(e.to_string()))
+  }
+
+  #[napi(catch_unwind)]
+  pub fn get_proof_index_by_hash(&self, hash: Uint8Array) -> napi::Result<u32> {
+    self
+      .inner
+      .get_proof_index_by_hash(&hash)
+      .map(|r| r as u32)
+      .map_err(|e| napi::Error::from_reason(e.to_string()))
+  }
 }

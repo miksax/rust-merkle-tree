@@ -24,8 +24,8 @@ export class ChecksumMerkleNew {
         return toBytes(data);
     }
 
-    public static verify(root: Uint8Array, values: [number, Uint8Array], proof: string[]): boolean {
-        const generatedProof = new MerkleProof(proof.map((p) => toBytes(p)));
+    public static verify(root: Uint8Array, values: [number, Uint8Array], proof: string[], size: number, pos: number, sorted: boolean): boolean {
+        const generatedProof = new MerkleProof(proof.map((p) => toBytes(p)), size, pos, sorted);
         return generatedProof.verify(root, MerkleTree.hash(ChecksumMerkleNew.toBytes(values)));
     }
 
@@ -56,10 +56,11 @@ export class ChecksumMerkleNew {
         const hashes = this.tree.hashes();
 
         for (let i = 0; i < hashes.length; i++) {
-            const hash = hashes[i];
+            const hash = hashes[i]
+            const index = this.tree.getIndexHash(hash)
             result.push([
                 Number(i),
-                this.tree.getProof(this.tree.getIndexHash(hash)).proofHashesHex(),
+                this.tree.getProof(index).proofHashesHex(),
             ]);
         }
 

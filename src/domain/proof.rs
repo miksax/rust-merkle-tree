@@ -7,6 +7,8 @@ where
   T: MerkleTreeTrait,
 {
   hashes: Vec<Vec<u8>>,
+  tree_index: usize,
+  sort: bool,
   phantom: PhantomData<T>,
 }
 
@@ -14,9 +16,25 @@ impl<T> MerkleProofInner<T>
 where
   T: MerkleTreeTrait,
 {
-  pub fn new_from_proof(proof_hashes: Vec<Vec<u8>>) -> Self {
+  pub fn new_from_proof(
+    proof_hashes: Vec<Vec<u8>>,
+    position: usize,
+    len: usize,
+    sort: bool,
+  ) -> Self {
     Self {
       hashes: proof_hashes,
+      tree_index: len * 2 - 2 - position,
+      sort,
+      phantom: PhantomData,
+    }
+  }
+
+  pub fn new_proof(proof_hashes: Vec<Vec<u8>>, tree_index: usize, sort: bool) -> Self {
+    Self {
+      hashes: proof_hashes,
+      tree_index,
+      sort,
       phantom: PhantomData,
     }
   }
@@ -26,10 +44,22 @@ where
   }
 
   pub fn root(&self, hash: &[u8]) -> Vec<u8> {
-    self
-      .hashes
-      .iter()
-      .fold(hash.to_vec(), |acc, hash| T::hash_nodes(&acc, hash))
+    let mut pos = self.tree_index;
+    let mut index = 0;
+    let mut hash = hash.to_vec();
+
+    while pos > 0 && index < self.hashes.len() {
+      let sibling = T::sibling_index(pos).unwrap();
+      if sibling > pos {
+        hash = T::hash_nodes(&hash, &self.hashes[index], self.sort);
+      } else {
+        hash = T::hash_nodes(&self.hashes[index], &hash, self.sort);
+      }
+      index += 1;
+      pos = T::parent_index(pos).unwrap();
+    }
+
+    hash
   }
 
   pub fn verify(&self, root: &[u8], hash: &[u8]) -> bool {
@@ -54,7 +84,10 @@ mod tests {
         ]
         .iter()
         .map(|h| hex::decode(h).unwrap())
-        .collect()
+        .collect(),
+        0,
+        12,
+        true
       )
       .root(
         &hex::decode("c67892017db365f15687b283fea0741145e1b54a62430fd814e1755c6e25949e").unwrap()
@@ -75,7 +108,10 @@ mod tests {
       ]
       .iter()
       .map(|h| hex::decode(h).unwrap())
-      .collect()
+      .collect(),
+      0,
+      12,
+      true
     )
     .verify(
       &hex::decode("1eb2fbe0d23ed86d1ad0da939771e8320da2c7de2c341960fe854a7f1ee317c4").unwrap(),
