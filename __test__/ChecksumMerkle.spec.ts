@@ -44,7 +44,7 @@ test('Test ChecksumMerkle compatibility', (t) => {
 
 
     t.true(
-        new MerkleProof(proofOld![0][1].map((p) => toBytes(p)), 0, 6, true).verify(
+        new MerkleProof(proofOld![0][1].map((p) => toBytes(p)), 0, 6).verify(
             toBytes(merkleNew.root!),
             MerkleTree.hash(ChecksumMerkleNew.toBytes(merkleOld.rawValues[0]!)),
         ),

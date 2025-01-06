@@ -1,14 +1,12 @@
-use itertools::Itertools;
 use log::{debug, info};
 use rayon::prelude::*;
 use sha2::{digest::FixedOutput, Digest, Sha256};
-use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::Instant;
 
 pub trait MerkleTreeTrait {
   fn hash_leaf(data: &[u8]) -> Vec<u8>;
-  fn hash_nodes(first: &[u8], second: &[u8], sort: bool) -> Vec<u8>;
+  fn hash_nodes(first: &[u8], second: &[u8]) -> Vec<u8>;
   fn left_child_index(i: usize) -> usize {
     2 * i + 1
   }
@@ -31,22 +29,18 @@ pub trait MerkleTreeTrait {
     }
   }
   fn tree_index(len: usize, pos: usize) -> anyhow::Result<usize> {
-    if pos < len {
-      Err(anyhow::anyhow!("Pos is less then len"))
+    if pos >= len {
+      Err(anyhow::anyhow!("Pos is more then len"))
     } else {
-      Ok(pos * 2 - 2 - pos)
+      Ok(len * 2 - 2 - pos)
     }
   }
 }
 
 #[derive(Default, Debug, PartialEq, Eq)]
 pub struct MerkleTreeSha256 {
-  leaves: Vec<Vec<u8>>,
   tree: Vec<Vec<u8>>,
-  sort: bool,
   root: Option<Vec<u8>>,
-  tree_map: Vec<usize>,
-  hash_map: HashMap<Vec<u8>, usize>,
 }
 
 impl MerkleTreeTrait for MerkleTreeSha256 {
@@ -61,30 +55,26 @@ impl MerkleTreeTrait for MerkleTreeSha256 {
     hasher.finalize_fixed().to_vec()
   }
 
-  fn hash_nodes(first: &[u8], second: &[u8], sort: bool) -> Vec<u8> {
+  fn hash_nodes(first: &[u8], second: &[u8]) -> Vec<u8> {
     let mut hasher = Sha256::new();
-    if !sort || first.cmp(second) == std::cmp::Ordering::Less {
-      hasher.update(first);
-      hasher.update(second);
-    } else {
-      hasher.update(second);
-      hasher.update(first);
-    }
+    hasher.update(first);
+    hasher.update(second);
+
     hasher.finalize_fixed().to_vec()
   }
 }
 
 impl MerkleTreeSha256 {
-  pub fn from_leaves_data(leaves: Vec<Vec<u8>>, sort: bool) -> anyhow::Result<Self> {
+  pub fn from_leaves_data(leaves: Vec<Vec<u8>>) -> anyhow::Result<Self> {
     let hashed_leaves: Vec<_> = leaves
       .par_iter()
       .map(|leaf| Self::hash_leaf(leaf))
       .collect();
 
-    Self::from_leaves_hashes(hashed_leaves, sort)
+    Self::from_leaves_hashes(hashed_leaves)
   }
 
-  pub fn from_leaves_hashes(leaves: Vec<Vec<u8>>, sort: bool) -> anyhow::Result<Self> {
+  pub fn from_leaves_hashes(leaves: Vec<Vec<u8>>) -> anyhow::Result<Self> {
     // Initialize the logger at the start of your application, not here
     // env_logger::init();
 
@@ -103,16 +93,6 @@ impl MerkleTreeSha256 {
     debug!("Tree initialization took {:?}", tree_init_start.elapsed());
 
     let setup_start = Instant::now();
-    let leaves_iterator: Vec<(usize, (usize, &Vec<u8>))> = if sort {
-      leaves
-        .iter()
-        .enumerate()
-        .sorted_by(|(_, u1), (_, u2)| u1.cmp(u2))
-        .enumerate()
-        .collect()
-    } else {
-      leaves.iter().enumerate().enumerate().collect()
-    };
     debug!(
       "Setup (leaves_iterator creation) took {:?}",
       setup_start.elapsed()
@@ -120,8 +100,8 @@ impl MerkleTreeSha256 {
 
     // Assign leaves to the tree
     let assign_start = Instant::now();
-    for &(d1, (_d2, hash)) in leaves_iterator.iter() {
-      let tree_index = tree_len - 1 - d1;
+    for (index, hash) in leaves.iter().enumerate() {
+      let tree_index = tree_len - 1 - index;
       *tree[tree_index].lock().unwrap() = hash.clone();
     }
     debug!(
@@ -131,7 +111,7 @@ impl MerkleTreeSha256 {
 
     // Build the tree recursively in parallel
     let build_start = Instant::now();
-    let root_hash = Self::build_subtree(&tree, 0, tree_len, sort);
+    let root_hash = Self::build_subtree(&tree, 0, tree_len);
     debug!("Building the tree took {:?}", build_start.elapsed());
 
     // Extract the tree vector from the Mutexes
@@ -144,14 +124,7 @@ impl MerkleTreeSha256 {
 
     // Build tree_map and hash_map
     let map_build_start = Instant::now();
-    let mut tree_map: Vec<usize> = vec![0; leaves_len];
-    let mut hash_map: HashMap<Vec<u8>, usize> = HashMap::with_capacity(leaves_len);
 
-    for &(d1, (d2, hash)) in leaves_iterator.iter() {
-      let tree_index = tree_len - 1 - d1;
-      tree_map[d2] = tree_index;
-      hash_map.insert(hash.clone(), d2);
-    }
     debug!(
       "Building tree_map and hash_map took {:?}",
       map_build_start.elapsed()
@@ -161,21 +134,12 @@ impl MerkleTreeSha256 {
     info!("Total duration of from_leaves_hashes: {:?}", total_duration);
 
     Ok(Self {
-      leaves,
-      tree_map,
-      hash_map,
       root: Some(root_hash),
       tree: tree_vec,
-      sort,
     })
   }
 
-  fn build_subtree(
-    tree: &[Mutex<Vec<u8>>],
-    node_index: usize,
-    tree_len: usize,
-    sort: bool,
-  ) -> Vec<u8> {
+  fn build_subtree(tree: &[Mutex<Vec<u8>>], node_index: usize, tree_len: usize) -> Vec<u8> {
     if MerkleTreeSha256::left_child_index(node_index) >= tree_len {
       // Leaf node, already assigned
       tree[node_index].lock().unwrap().clone()
@@ -184,18 +148,18 @@ impl MerkleTreeSha256 {
       let right_child = MerkleTreeSha256::right_child_index(node_index);
 
       let (left_hash, right_hash) = rayon::join(
-        || Self::build_subtree(tree, left_child, tree_len, sort),
-        || Self::build_subtree(tree, right_child, tree_len, sort),
+        || Self::build_subtree(tree, left_child, tree_len),
+        || Self::build_subtree(tree, right_child, tree_len),
       );
 
-      let parent_hash = MerkleTreeSha256::hash_nodes(&left_hash, &right_hash, sort);
+      let parent_hash = MerkleTreeSha256::hash_nodes(&left_hash, &right_hash);
       *tree[node_index].lock().unwrap() = parent_hash.clone();
       parent_hash
     }
   }
 
   pub fn get_hashes(&self) -> impl Iterator<Item = &Vec<u8>> {
-    self.leaves.iter()
+    self.tree.iter().skip(self.tree.len() / 2)
   }
 
   pub fn get_index_by_data(&self, data: &[u8]) -> anyhow::Result<usize> {
@@ -203,39 +167,27 @@ impl MerkleTreeSha256 {
   }
 
   pub fn get_index_by_hash(&self, hash: &[u8]) -> anyhow::Result<usize> {
-    Ok(*self.hash_map.get(hash).expect("hash did not found"))
+    self
+      .tree
+      .iter()
+      .position(|h| h.eq(hash))
+      .ok_or(anyhow::anyhow!("hash did not found"))
   }
 
   pub fn get_root(&self) -> anyhow::Result<Vec<u8>> {
     Ok(self.root.clone().expect("Root is not generated"))
   }
 
-  pub fn get_proof_index_by_hash(&self, hash: &[u8]) -> anyhow::Result<usize> {
-    if let Ok(index) = self.get_index_by_hash(hash) {
-      Ok(self.tree_map[index])
-    } else {
-      Err(anyhow::anyhow!("Hash does not found"))
-    }
-  }
-
   pub fn get_proof(&self, index: usize) -> anyhow::Result<super::proof::MerkleProofInner<Self>> {
-    let mut tree_index = *self.tree_map.get(index).expect("Index does not exists");
-
+    let mut tree_index = index;
     let mut proof_hashes = Vec::new();
     while tree_index > 0 {
       proof_hashes.push(self.tree[Self::sibling_index(tree_index)?].clone());
       tree_index = Self::parent_index(tree_index)?;
     }
-    let proof = super::proof::MerkleProofInner::new_proof(
-      proof_hashes,
-      *self.tree_map.get(index).unwrap(),
-      self.sort,
-    );
+    let proof = super::proof::MerkleProofInner::new_from_index(proof_hashes, index);
 
-    let leaf_hash = self
-      .tree
-      .get(*self.tree_map.get(index).expect("Hash does not exist"))
-      .expect("Hash does not exist in tree");
+    let leaf_hash = self.tree.get(index).expect("Hash does not exist in tree");
 
     if proof.verify(
       self.root.as_ref().expect("root does not generated"),
@@ -252,6 +204,7 @@ impl MerkleTreeSha256 {
 mod tests {
   use super::super::proof::MerkleProofInner;
   use super::MerkleTreeSha256;
+  use super::MerkleTreeTrait;
 
   fn steps() -> Vec<usize> {
     vec![
@@ -264,88 +217,38 @@ mod tests {
     ]
   }
 
-  fn check_tree(hashes: [&str; 12], root: &str, sorted: bool) -> MerkleTreeSha256 {
+  fn check_tree(hashes: [&str; 12], root: &str) -> MerkleTreeSha256 {
     let tree = MerkleTreeSha256::from_leaves_hashes(
       hashes.iter().map(|h| hex::decode(h).unwrap()).collect(),
-      sorted,
     )
     .unwrap();
 
     // Test proof for each element of the tree
-    for (index, hash) in hashes.iter().enumerate() {
-      let proof = tree.get_proof(index).unwrap();
-      assert!(proof.verify(&hex::decode(root).unwrap(), &hex::decode(hash).unwrap()));
+    for hash in hashes.iter() {
+      let hash_bytes = hex::decode(hash).unwrap();
+      let proof = tree
+        .get_proof(tree.get_index_by_hash(&hash_bytes).unwrap())
+        .unwrap();
+      assert!(proof.verify(&hex::decode(root).unwrap(), &hash_bytes));
     }
 
     assert_eq!(tree.get_root().unwrap(), hex::decode(root).unwrap());
     tree
   }
 
-  fn check_proof(number: usize, sort: bool) {
+  fn check_proof(number: usize) {
     let hashes = (0..number)
       .map(|_| (0..32).map(|_| rand::random::<u8>()).collect::<Vec<u8>>())
       .collect::<Vec<Vec<u8>>>();
 
-    let tree = MerkleTreeSha256::from_leaves_hashes(hashes.clone(), sort).unwrap();
+    let tree = MerkleTreeSha256::from_leaves_hashes(hashes.clone()).unwrap();
 
     let root = tree.root.as_ref().unwrap();
     for hash in hashes.iter() {
-      let i = tree.hash_map.get(hash).unwrap();
+      let i = tree.get_index_by_hash(hash).unwrap();
       let proof = tree.get_proof(i.clone()).unwrap();
       assert!(proof.verify(root, &hash));
     }
-  }
-
-  #[test]
-  fn test_tree_sorted() {
-    // https://github.com/btc-vision/merkle-tree-sha256/blob/master/src/standard.test.ts.md
-
-    let tree = check_tree(
-      [
-        "93ca042c86dafda63e1a03b4625f614dc9364231e986d72490a480a4cc591c4a",
-        "713af6f789258961f0ed63b4073060bae6ba7e8b92bcb5383ebe18e6e76289d6",
-        "5d351e5962324a1b9920278825ca07b94d020b34941d20d5ac0f44dbbf3a5258",
-        "493c543220bceffa21283b176955173baa7745d563a7b5e2cae0b4253419a87f",
-        "39e429c0920f4089a43dbe24a7dfcfe0552bdaabfcc9356cde88f9ea18972bf4",
-        "33b544b8002201957eaa0816c4ee2bc244d4cce765e599df6f25adbb2cdb0c08",
-        "2e3580210116e2ab7c7705f8f0b6217ac7a0ac5f31de892f847171c073a7542f",
-        "016a2b39a42811f88585a5e07ee3a57283607b47816945d61354577ff8868378",
-        "c67892017db365f15687b283fea0741145e1b54a62430fd814e1755c6e25949e",
-        "af4f1bfe5c512e9265718f3fa9a028f7e70b29860c705763ecbb541f4a5877ce",
-        "a0e25bb110b98aa9c3e2be61e432cb432788d0dbe29991acd8ced7c7d9386aea",
-        "96ca5d6526e42a2a9da666e27cd8332c3a6b4cada4561726401f66ba08eaaa42",
-      ],
-      "1eb2fbe0d23ed86d1ad0da939771e8320da2c7de2c341960fe854a7f1ee317c4",
-      true,
-    );
-
-    let proof_index = tree
-      .get_proof_index_by_hash(
-        &hex::decode("93ca042c86dafda63e1a03b4625f614dc9364231e986d72490a480a4cc591c4a").unwrap(),
-      )
-      .unwrap();
-    let index = tree
-      .get_index_by_hash(
-        &hex::decode("93ca042c86dafda63e1a03b4625f614dc9364231e986d72490a480a4cc591c4a").unwrap(),
-      )
-      .unwrap();
-
-    assert_eq!(
-      tree.get_proof(index).unwrap(),
-      MerkleProofInner::<MerkleTreeSha256>::new_proof(
-        [
-          "713af6f789258961f0ed63b4073060bae6ba7e8b92bcb5383ebe18e6e76289d6",
-          "9f5040eb0ee98927dcf3e7256161cad8a55f1530c6106fdc75c674c98d6cb8fe",
-          "4d42ca27311b1512c3d3cd5ac07864264b096981cbc8b19bef642613023ca132",
-          "9e54701031c343fbf4d2848a4de7df9252a1bac6b4e4b83e64d14ac44c070e4e",
-        ]
-        .iter()
-        .map(|h| hex::decode(h).unwrap())
-        .collect(),
-        proof_index,
-        true
-      )
-    );
   }
 
   #[test]
@@ -366,20 +269,18 @@ mod tests {
         "a0e25bb110b98aa9c3e2be61e432cb432788d0dbe29991acd8ced7c7d9386aea",
       ],
       "3182eef79a093bac51458d77b984c513a473573ef129b41268e062fc2b2d4caa",
-      false,
     );
+    let index = tree
+      .get_index_by_hash(
+        &hex::decode("a0e25bb110b98aa9c3e2be61e432cb432788d0dbe29991acd8ced7c7d9386aea").unwrap(),
+      )
+      .unwrap();
+
+    assert_eq!(index, MerkleTreeSha256::tree_index(12, 11).unwrap());
+    let proof = tree.get_proof(index).unwrap();
     assert_eq!(
-      tree
-        .get_proof(
-          tree
-            .get_index_by_hash(
-              &hex::decode("a0e25bb110b98aa9c3e2be61e432cb432788d0dbe29991acd8ced7c7d9386aea")
-                .unwrap()
-            )
-            .unwrap()
-        )
-        .unwrap(),
-      MerkleProofInner::<MerkleTreeSha256>::new_from_proof(
+      proof,
+      MerkleProofInner::<MerkleTreeSha256>::new_from_pos_len(
         [
           "96ca5d6526e42a2a9da666e27cd8332c3a6b4cada4561726401f66ba08eaaa42",
           "f623586be521ccdb9862dea9e6c9541b113f3497c89e3f72315a8e12d1dbb754",
@@ -390,7 +291,6 @@ mod tests {
         .collect(),
         11,
         12,
-        false
       )
     );
   }
@@ -398,92 +298,11 @@ mod tests {
   #[test]
   fn test_unsorted() {
     for n in steps() {
-      check_proof(n, false);
-    }
-  }
-
-  #[test]
-  fn test_sorted() {
-    for n in steps() {
-      check_proof(n, true);
+      check_proof(n);
     }
   }
 
   // Audit
-
-  #[test]
-  fn test_1() {
-    let hashes = [
-      "93ca042c86dafda63e1a03b4625f614dc9364231e986d72490a480a4cc591c4a",
-      "713af6f789258961f0ed63b4073060bae6ba7e8b92bcb5383ebe18e6e76289d6",
-      "5d351e5962324a1b9920278825ca07b94d020b34941d20d5ac0f44dbbf3a5258",
-      "493c543220bceffa21283b176955173baa7745d563a7b5e2cae0b4253419a87f",
-      "39e429c0920f4089a43dbe24a7dfcfe0552bdaabfcc9356cde88f9ea18972bf4",
-      "33b544b8002201957eaa0816c4ee2bc244d4cce765e599df6f25adbb2cdb0c08",
-      "2e3580210116e2ab7c7705f8f0b6217ac7a0ac5f31de892f847171c073a7542f",
-      "016a2b39a42811f88585a5e07ee3a57283607b47816945d61354577ff8868378",
-      "c67892017db365f15687b283fea0741145e1b54a62430fd814e1755c6e25949e",
-      "af4f1bfe5c512e9265718f3fa9a028f7e70b29860c705763ecbb541f4a5877ce",
-      "a0e25bb110b98aa9c3e2be61e432cb432788d0dbe29991acd8ced7c7d9386aea",
-      "96ca5d6526e42a2a9da666e27cd8332c3a6b4cada4561726401f66ba08eaaa42",
-    ];
-    let root = "1eb2fbe0d23ed86d1ad0da939771e8320da2c7de2c341960fe854a7f1ee317c4";
-
-    let tree = MerkleTreeSha256::from_leaves_hashes(
-      hashes.iter().map(|h| hex::decode(h).unwrap()).collect(),
-      true,
-    )
-    .unwrap();
-    assert_eq!(tree.get_root().unwrap(), hex::decode(root).unwrap());
-
-    // Create a proof for one of the leaf nodes
-    let proof = MerkleProofInner::<MerkleTreeSha256>::new_from_proof(
-      [
-        "713af6f789258961f0ed63b4073060bae6ba7e8b92bcb5383ebe18e6e76289d6",
-        "9f5040eb0ee98927dcf3e7256161cad8a55f1530c6106fdc75c674c98d6cb8fe",
-        "4d42ca27311b1512c3d3cd5ac07864264b096981cbc8b19bef642613023ca132",
-        "9e54701031c343fbf4d2848a4de7df9252a1bac6b4e4b83e64d14ac44c070e4e",
-      ]
-      .iter()
-      .map(|h| hex::decode(h).unwrap())
-      .collect(),
-      0,
-      12,
-      true,
-    );
-
-    // Verify the proof with the correct leaf hash
-    assert!(proof.verify(
-      &hex::decode(root).unwrap(),
-      &hex::decode("93ca042c86dafda63e1a03b4625f614dc9364231e986d72490a480a4cc591c4a").unwrap()
-    ));
-
-    // Create a proof with a truncated set of hashes
-    let _proof = MerkleProofInner::<MerkleTreeSha256>::new_from_proof(
-      [
-        "9f5040eb0ee98927dcf3e7256161cad8a55f1530c6106fdc75c674c98d6cb8fe",
-        "4d42ca27311b1512c3d3cd5ac07864264b096981cbc8b19bef642613023ca132",
-        "9e54701031c343fbf4d2848a4de7df9252a1bac6b4e4b83e64d14ac44c070e4e",
-      ]
-      .iter()
-      .map(|h| hex::decode(h).unwrap())
-      .collect(),
-      0,
-      12,
-      true,
-    );
-
-    // Verify the proof with a fake leaf hash
-    /*
-    assert!(!proof.verify(
-        &hex::decode(root).unwrap(),
-        &hex::decode("aae47106d882563487de43ea5c0ac5ec53a60e2d3cc9a88f93b0d33cf0c78ddc")
-            .unwrap()
-    ))
-    ;
-    */
-  }
-
   #[test]
   fn test_2() {
     // Original set of hashes
@@ -505,7 +324,6 @@ mod tests {
     // Construct a Merkle tree with unsorted input
     let tree_1 = MerkleTreeSha256::from_leaves_hashes(
       hashes_1.iter().map(|h| hex::decode(h).unwrap()).collect(),
-      false,
     )
     .unwrap();
 
@@ -528,7 +346,6 @@ mod tests {
     // Construct another tree with rearranged input
     let tree_2 = MerkleTreeSha256::from_leaves_hashes(
       hashes_2.iter().map(|h| hex::decode(h).unwrap()).collect(),
-      false,
     )
     .unwrap();
 

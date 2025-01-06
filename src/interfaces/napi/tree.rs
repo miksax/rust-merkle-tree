@@ -1,4 +1,4 @@
-use super::{options::MerkleTreeOptionsJs, proof::MerkleProofJs};
+use super::proof::MerkleProofJs;
 use crate::domain::tree::{MerkleTreeSha256, MerkleTreeTrait};
 use napi::bindgen_prelude::Uint8Array;
 
@@ -15,17 +15,10 @@ impl MerkleTreeJs {
   }
 
   #[napi(constructor)]
-  pub fn from_leaves(leaves: Vec<Uint8Array>, sort_leaves: Option<bool>) -> napi::Result<Self> {
-    let options = MerkleTreeOptionsJs {
-      sort_leaves: sort_leaves.unwrap_or(true),
-    };
-
-    MerkleTreeSha256::from_leaves_data(
-      leaves.iter().map(|l| l.to_vec()).collect(),
-      options.sort_leaves,
-    )
-    .map(|t| MerkleTreeJs { inner: t })
-    .map_err(|err| napi::Error::from_reason(err.to_string()))
+  pub fn from_leaves(leaves: Vec<Uint8Array>) -> napi::Result<Self> {
+    MerkleTreeSha256::from_leaves_data(leaves.iter().map(|l| l.to_vec()).collect())
+      .map(|t| MerkleTreeJs { inner: t })
+      .map_err(|err| napi::Error::from_reason(err.to_string()))
   }
 
   #[napi]
@@ -77,25 +70,6 @@ impl MerkleTreeJs {
     self
       .inner
       .get_index_by_hash(&hash)
-      .map(|r| r as u32)
-      .map_err(|e| napi::Error::from_reason(e.to_string()))
-  }
-
-  #[napi(catch_unwind)]
-  pub fn get_proof_index_by_data(&self, data: Uint8Array) -> napi::Result<u32> {
-    let hash = MerkleTreeSha256::hash_leaf(&data);
-    self
-      .inner
-      .get_index_by_hash(&hash)
-      .map(|r| r as u32)
-      .map_err(|e| napi::Error::from_reason(e.to_string()))
-  }
-
-  #[napi(catch_unwind)]
-  pub fn get_proof_index_by_hash(&self, hash: Uint8Array) -> napi::Result<u32> {
-    self
-      .inner
-      .get_proof_index_by_hash(&hash)
       .map(|r| r as u32)
       .map_err(|e| napi::Error::from_reason(e.to_string()))
   }
